@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">BLO App Assistant</string>
+    <string name="accessibility_service_description">This service inspects the screen for the BLO App to assist in auto-filling fields. It is part of the BLO App Assistant.</string>
+</resources>
