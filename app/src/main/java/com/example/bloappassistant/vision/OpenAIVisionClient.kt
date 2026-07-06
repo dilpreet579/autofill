@@ -54,32 +54,31 @@ object OpenAIVisionClient {
         val base64Image = Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
 
         val systemPrompt = """
-            You are a highly accurate OCR assistant specializing in reading messy handwritten Indian voter registration forms (BLO forms). 
-            Your task is to extract specific fields precisely as they are written. DO NOT hallucinate or guess. If a field is completely illegible or empty, leave the value as an empty string "".
+            System Context:
+            You are an expert data extraction agent. You will be provided with images of forms from the Election Commission of India. The layout of these forms is static and will always follow the same format.
             
-            Guidelines:
-            - date_of_birth: Usually in DD/MM/YYYY format. Extract exactly what is written.
-            - aadhaar_no: Usually a 12-digit number.
-            - mobile_no: Usually a 10-digit number.
-            - father_name / mother_name / spouse_name: Names may be written in cursive or block letters. Extract carefully.
-            - spouse_epic: Alphanumeric voter ID number.
-
-            The handwriting may be in English, Hindi, or Punjabi. Always output every value in
-            English using only the Latin alphabet. If a name is written in Devanagari or
-            Gurmukhi script, transliterate it phonetically into English (for example,
-            ਹਰਜੀਤ ਸਿੰਘ becomes Harjit Singh). Never output Devanagari or Gurmukhi characters
-            in the JSON values.
-
-            Extract the data and return it in strict JSON format using exactly these keys:
-            - date_of_birth
-            - aadhaar_no
-            - mobile_no
-            - father_name
-            - mother_name
-            - spouse_name
-            - spouse_epic
-
-            Return ONLY valid JSON. No conversational text, no markdown formatting.
+            Task:
+            Your objective is to locate the "Personal Details" section (found in the lower half of the table) and accurately extract the handwritten values for specific fields.
+            
+            Fields to Extract (and their strict JSON keys):
+            You must extract the data corresponding to the following exact field names. Note that the form's printed labels are in Punjabi (Gurmukhi), while the handwritten answers may be in English, numerals, or Punjabi.
+            - date_of_birth : Date of Birth (Printed as: ਜਨਮ ਮਿਤੀ) - Expected format: DD/MM/YYYY.
+            - aadhaar_no : Aadhaar Number (Printed as: ਆਧਾਰ ਨੰ.) - 12-digit number.
+            - mobile_no : Mobile Number (Printed as: ਮੋਬਾਇਲ ਨੰ.) - 10-digit number.
+            - father_name : Father/Guardian's Name (Printed as: ਪਿਤਾ/ਸਰਪ੍ਰਸਤ ਦਾ ਨਾਮ).
+            - mother_name : Mother's Name (Printed as: ਮਾਤਾ ਦਾ ਨਾਮ).
+            - spouse_name : Spouse (Husband/Wife) Name (Printed as: ਪਤੀ ਜਾਂ ਪਤਨੀ ਦਾ ਨਾਮ).
+            - spouse_epic : Spouse EPIC/Voter ID Number.
+            
+            Extraction Rules:
+            Language: Always output every value in English using only the Latin alphabet, regardless
+            of whether the handwriting is in English or Punjabi. If a name is written in Gurmukhi
+            script, transliterate it phonetically into English (for example, ਹਰਜੀਤ ਸਿੰਘ becomes
+            Harjit Singh). Never output Gurmukhi characters in the JSON values.
+            Missing Data: If a field is left completely blank or marked with a dash (-), output an empty string "".
+            No Hallucinations: Do not guess missing numbers or correct spelling mistakes in names.
+            
+            Return ONLY valid JSON using the strict keys listed above. No conversational text, no markdown formatting.
         """.trimIndent()
 
         val jsonBody = org.json.JSONObject().apply {
