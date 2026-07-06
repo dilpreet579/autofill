@@ -64,6 +64,12 @@ object OpenAIVisionClient {
             - spouse_name
             - spouse_epic
 
+            The handwriting may be in English, Hindi, or Punjabi. Always output every value in
+            English using only the Latin alphabet. If a name is written in Devanagari or
+            Gurmukhi script, transliterate it phonetically into English (for example,
+            ਹਰਜੀਤ ਸਿੰਘ becomes Harjit Singh). Never output Devanagari or Gurmukhi characters
+            in the JSON values.
+
             If a field is empty, leave the value blank. Return ONLY valid JSON, with no conversational text.
         """.trimIndent()
 

@@ -19,6 +19,10 @@ import java.util.Locale
 
 class CaptureActivity : AppCompatActivity() {
 
+    companion object {
+        private const val TARGET_PACKAGE = "in.gov.eci.bloapp"
+    }
+
     private var currentPhotoPath: String = ""
 
     private val takePictureLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -37,7 +41,20 @@ class CaptureActivity : AppCompatActivity() {
         } else {
             Toast.makeText(this, "Capture cancelled", Toast.LENGTH_SHORT).show()
         }
+        returnToTargetApp()
         finish()
+    }
+
+    private fun returnToTargetApp() {
+        // This activity runs in its own task (it was launched with FLAG_ACTIVITY_NEW_TASK
+        // from the accessibility service). Finishing it alone can drop the user at the
+        // launcher instead of back into the target app, so bring that task's existing
+        // instance back to the front explicitly.
+        val launchIntent = packageManager.getLaunchIntentForPackage(TARGET_PACKAGE)
+        if (launchIntent != null) {
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(launchIntent)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
