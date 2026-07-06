@@ -6,7 +6,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -19,10 +18,6 @@ import java.util.Date
 import java.util.Locale
 
 class CaptureActivity : AppCompatActivity() {
-
-    companion object {
-        private const val TARGET_PACKAGE = "in.gov.eci.bloapp"
-    }
 
     private var currentPhotoPath: String = ""
 
@@ -42,22 +37,13 @@ class CaptureActivity : AppCompatActivity() {
         } else {
             Toast.makeText(this, "Capture cancelled", Toast.LENGTH_SHORT).show()
         }
-        returnToTargetApp()
-        finish()
-    }
-
-    private fun returnToTargetApp() {
         // This activity runs in its own task (it was launched with FLAG_ACTIVITY_NEW_TASK
-        // from the accessibility service). Finishing it alone can drop the user at the
-        // launcher instead of back into the target app, so bring that task's existing
-        // instance back to the front explicitly.
-        val launchIntent = packageManager.getLaunchIntentForPackage(TARGET_PACKAGE)
-        if (launchIntent != null) {
-            launchIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_NEW_TASK)
-            startActivity(launchIntent)
-        } else {
-            Log.w("InspectorService", "Could not resolve launch intent for '$TARGET_PACKAGE' (missing <queries> visibility?)")
-        }
+        // from the accessibility service, which has no existing task to return to).
+        // moveTaskToBack reveals whatever task was in front before it (the BLO app, exactly
+        // as the user left it) instead of finish()'s "go home" fallback, and without sending
+        // the target app a fresh launch intent that would reset it to its start screen.
+        moveTaskToBack(true)
+        finish()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
