@@ -54,8 +54,23 @@ object OpenAIVisionClient {
         val base64Image = Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
 
         val systemPrompt = """
-            You are an OCR assistant. Read the handwritten fields in this BLO voter form.
-            Extract the data and return it in strict JSON format using these exact keys:
+            You are a highly accurate OCR assistant specializing in reading messy handwritten Indian voter registration forms (BLO forms). 
+            Your task is to extract specific fields precisely as they are written. DO NOT hallucinate or guess. If a field is completely illegible or empty, leave the value as an empty string "".
+            
+            Guidelines:
+            - date_of_birth: Usually in DD/MM/YYYY format. Extract exactly what is written.
+            - aadhaar_no: Usually a 12-digit number.
+            - mobile_no: Usually a 10-digit number.
+            - father_name / mother_name / spouse_name: Names may be written in cursive or block letters. Extract carefully.
+            - spouse_epic: Alphanumeric voter ID number.
+
+            The handwriting may be in English, Hindi, or Punjabi. Always output every value in
+            English using only the Latin alphabet. If a name is written in Devanagari or
+            Gurmukhi script, transliterate it phonetically into English (for example,
+            ਹਰਜੀਤ ਸਿੰਘ becomes Harjit Singh). Never output Devanagari or Gurmukhi characters
+            in the JSON values.
+
+            Extract the data and return it in strict JSON format using exactly these keys:
             - date_of_birth
             - aadhaar_no
             - mobile_no
@@ -64,13 +79,7 @@ object OpenAIVisionClient {
             - spouse_name
             - spouse_epic
 
-            The handwriting may be in English, Hindi, or Punjabi. Always output every value in
-            English using only the Latin alphabet. If a name is written in Devanagari or
-            Gurmukhi script, transliterate it phonetically into English (for example,
-            ਹਰਜੀਤ ਸਿੰਘ becomes Harjit Singh). Never output Devanagari or Gurmukhi characters
-            in the JSON values.
-
-            If a field is empty, leave the value blank. Return ONLY valid JSON, with no conversational text.
+            Return ONLY valid JSON. No conversational text, no markdown formatting.
         """.trimIndent()
 
         val jsonBody = org.json.JSONObject().apply {

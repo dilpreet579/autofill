@@ -4,6 +4,7 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <queries>
+        <package android:name="in.gov.eci.bloapp" />
         <intent>
             <action android:name="android.media.action.IMAGE_CAPTURE" />
         </intent>

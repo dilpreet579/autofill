@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -54,6 +55,8 @@ class CaptureActivity : AppCompatActivity() {
         if (launchIntent != null) {
             launchIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_NEW_TASK)
             startActivity(launchIntent)
+        } else {
+            Log.w("InspectorService", "Could not resolve launch intent for '$TARGET_PACKAGE' (missing <queries> visibility?)")
         }
     }
 
