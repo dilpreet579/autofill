@@ -82,7 +82,7 @@ object OpenAIVisionClient {
         """.trimIndent()
 
         val jsonBody = org.json.JSONObject().apply {
-            put("model", "gpt-4o")
+            put("model", "gpt-5.4")
             put("messages", org.json.JSONArray().apply {
                 put(org.json.JSONObject().apply {
                     put("role", "system")
@@ -100,7 +100,7 @@ object OpenAIVisionClient {
                     })
                 })
             })
-            put("max_tokens", 500)
+            put("max_completion_tokens", 1000)
             put("response_format", org.json.JSONObject().apply {
                 put("type", "json_object")
             })
