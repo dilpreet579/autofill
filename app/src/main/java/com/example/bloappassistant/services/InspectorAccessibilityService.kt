@@ -1,5 +1,6 @@
 package com.example.bloappassistant.services
 
+import android.accessibilityservice.AccessibilityButtonController
 import android.accessibilityservice.AccessibilityService
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -41,6 +42,19 @@ class InspectorAccessibilityService : AccessibilityService() {
         } else {
             registerReceiver(autofillReceiver, filter)
         }
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            accessibilityButtonController.registerAccessibilityButtonCallback(
+                object : AccessibilityButtonController.AccessibilityButtonCallback() {
+                    override fun onClicked(controller: AccessibilityButtonController) {
+                        Log.d(TAG, "Stickman clicked! Launching camera...")
+                        val captureIntent = Intent(this@InspectorAccessibilityService, com.example.bloappassistant.ui.CaptureActivity::class.java)
+                        captureIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        startActivity(captureIntent)
+                    }
+                }
+            )
+        }
     }
 
     override fun onDestroy() {
@@ -71,14 +85,6 @@ class InspectorAccessibilityService : AccessibilityService() {
                 Log.d(TAG, "Root node is null")
             }
         }
-    }
-
-    override fun onAccessibilityButtonClicked() {
-        super.onAccessibilityButtonClicked()
-        Log.d(TAG, "Stickman clicked! Launching camera...")
-        val captureIntent = Intent(this, com.example.bloappassistant.ui.CaptureActivity::class.java)
-        captureIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        startActivity(captureIntent)
     }
 
     private fun dumpNodeTree(node: AccessibilityNodeInfo, depth: Int) {
