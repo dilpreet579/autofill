@@ -1,18 +1,51 @@
 package com.example.bloappassistant.services
 
 import android.accessibilityservice.AccessibilityService
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Rect
+import android.os.Bundle
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import org.json.JSONObject
 
 class InspectorAccessibilityService : AccessibilityService() {
 
     companion object {
         private const val TAG = "InspectorService"
-        // If we know the BLO app package name, we can filter here, e.g. "com.eci.blo"
-        // For now, let's just log everything to see what's what.
+        private const val TARGET_PACKAGE = "in.gov.eci.bloapp"
         private var lastEventTime = 0L
+    }
+
+    private var lastTextViewContext = ""
+
+    private val autofillReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "com.example.bloappassistant.AUTOFILL_DATA") {
+                val jsonData = intent.getStringExtra("json_data")
+                if (jsonData != null) {
+                    performAutofill(jsonData)
+                }
+            }
+        }
+    }
+
+    override fun onServiceConnected() {
+        super.onServiceConnected()
+        val filter = IntentFilter("com.example.bloappassistant.AUTOFILL_DATA")
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(autofillReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(autofillReceiver, filter)
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(autofillReceiver)
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -30,13 +63,22 @@ class InspectorAccessibilityService : AccessibilityService() {
 
             val rootNode = rootInActiveWindow
             if (rootNode != null) {
-                Log.d(TAG, "Dumping Accessibility Tree for: $packageName")
-                dumpNodeTree(rootNode, 0)
-                rootNode.recycle() // Recycle when done
+                // Log.d(TAG, "Dumping Accessibility Tree for: $packageName")
+                // dumpNodeTree(rootNode, 0)
+                // Disabled dumping to keep logs clean for now
+                rootNode.recycle()
             } else {
                 Log.d(TAG, "Root node is null")
             }
         }
+    }
+
+    override fun onAccessibilityButtonClicked(displayId: Int) {
+        super.onAccessibilityButtonClicked(displayId)
+        Log.d(TAG, "Stickman clicked! Launching camera...")
+        val captureIntent = Intent(this, com.example.bloappassistant.ui.CaptureActivity::class.java)
+        captureIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        startActivity(captureIntent)
     }
 
     private fun dumpNodeTree(node: AccessibilityNodeInfo, depth: Int) {
@@ -76,6 +118,76 @@ class InspectorAccessibilityService : AccessibilityService() {
             val child = node.getChild(i)
             if (child != null) {
                 dumpNodeTree(child, depth + 1)
+
+            }
+        }
+    }
+
+    private fun performAutofill(jsonString: String) {
+        try {
+            val jsonObject = JSONObject(jsonString)
+            val rootNode = rootInActiveWindow
+            if (rootNode != null) {
+                lastTextViewContext = ""
+                traverseAndFill(rootNode, jsonObject)
+                rootNode.recycle()
+            } else {
+                Log.e(TAG, "Cannot autofill: Root node is null")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse JSON for autofill", e)
+        }
+    }
+
+    private fun traverseAndFill(node: AccessibilityNodeInfo, json: JSONObject) {
+        val className = node.className?.toString() ?: ""
+        val text = node.text?.toString() ?: ""
+        
+        // Track context for EPIC fields
+        if (className == "android.widget.TextView" && text.isNotEmpty()) {
+            lastTextViewContext = text
+        }
+
+        var hint = ""
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            hint = node.hintText?.toString() ?: ""
+        }
+        
+        if (node.isEditable) {
+            var valueToInject: String? = null
+            val lowerHint = hint.lowercase()
+
+            if (lowerHint.contains("date of birth")) {
+                valueToInject = json.optString("date_of_birth", "")
+            } else if (lowerHint.contains("aadhaar no")) {
+                valueToInject = json.optString("aadhaar_no", "")
+            } else if (lowerHint.contains("mobile no")) {
+                valueToInject = json.optString("mobile_no", "")
+            } else if (lowerHint.contains("father's/legal guardian name")) {
+                valueToInject = json.optString("father_name", "")
+            } else if (lowerHint.contains("mother's name")) {
+                valueToInject = json.optString("mother_name", "")
+            } else if (lowerHint.contains("spouse's name")) {
+                valueToInject = json.optString("spouse_name", "")
+            } else if (lowerHint.contains("epic number")) {
+                val lowerContext = lastTextViewContext.lowercase()
+                if (lowerContext.contains("spouse's epic")) {
+                    valueToInject = json.optString("spouse_epic", "")
+                }
+            }
+
+            if (!valueToInject.isNullOrEmpty()) {
+                Log.d(TAG, "Injecting '$valueToInject' into field with hint '$hint'")
+                val arguments = Bundle()
+                arguments.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, valueToInject)
+                node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)
+            }
+        }
+
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            if (child != null) {
+                traverseAndFill(child, json)
                 child.recycle()
             }
         }
