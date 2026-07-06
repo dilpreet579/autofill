@@ -133,13 +133,22 @@ class InspectorAccessibilityService : AccessibilityService() {
         try {
             val jsonObject = JSONObject(jsonString)
             val rootNode = rootInActiveWindow
-            if (rootNode != null) {
-                lastTextViewContext = ""
-                traverseAndFill(rootNode, jsonObject)
-                rootNode.recycle()
-            } else {
+            if (rootNode == null) {
                 Log.e(TAG, "Cannot autofill: Root node is null")
+                return
             }
+
+            val foregroundPackage = rootNode.packageName?.toString()
+            if (foregroundPackage != TARGET_PACKAGE) {
+                Log.w(TAG, "Skipping autofill: foreground app is '$foregroundPackage', expected '$TARGET_PACKAGE'")
+                rootNode.recycle()
+                return
+            }
+
+            Log.d(TAG, "Starting autofill for $TARGET_PACKAGE")
+            lastTextViewContext = ""
+            traverseAndFill(rootNode, jsonObject)
+            rootNode.recycle()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to parse JSON for autofill", e)
         }
