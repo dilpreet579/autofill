@@ -6,13 +6,11 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import com.example.bloappassistant.R
-import com.example.bloappassistant.vision.OpenAIVisionClient
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -27,31 +25,19 @@ class CaptureActivity : AppCompatActivity() {
         if (result.resultCode == Activity.RESULT_OK) {
             val file = File(currentPhotoPath)
             if (file.exists()) {
-                Toast.makeText(this, "Analyzing image...", Toast.LENGTH_SHORT).show()
-                OpenAIVisionClient.analyzeForm(file) { jsonResponse ->
-                    runOnUiThread {
-                        if (jsonResponse != null) {
-                            Toast.makeText(this, "JSON Extracted!", Toast.LENGTH_SHORT).show()
-                            Log.d("CaptureActivity", "JSON Output: $jsonResponse")
-                            
-                            // Broadcast the JSON to the InspectorService so it can autofill
-                            val intent = Intent("com.example.bloappassistant.AUTOFILL_DATA")
-                            intent.putExtra("json_data", jsonResponse)
-                            sendBroadcast(intent)
-                        } else {
-                            Toast.makeText(this, "Failed to analyze image.", Toast.LENGTH_LONG).show()
-                        }
-                        finish()
-                    }
-                }
+                // Hand off to the accessibility service and return to the target app
+                // immediately, instead of keeping this activity in the foreground for
+                // the duration of the OpenAI network call.
+                val intent = Intent("com.example.bloappassistant.PHOTO_CAPTURED")
+                intent.putExtra("photo_path", currentPhotoPath)
+                sendBroadcast(intent)
             } else {
                 Toast.makeText(this, "Image file not found.", Toast.LENGTH_SHORT).show()
-                finish()
             }
         } else {
             Toast.makeText(this, "Capture cancelled", Toast.LENGTH_SHORT).show()
-            finish()
         }
+        finish()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

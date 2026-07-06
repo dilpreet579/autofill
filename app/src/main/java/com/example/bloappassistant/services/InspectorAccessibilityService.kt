@@ -8,27 +8,34 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Rect
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import android.widget.Toast
+import com.example.bloappassistant.vision.OpenAIVisionClient
 import org.json.JSONObject
+import java.io.File
 
 class InspectorAccessibilityService : AccessibilityService() {
 
     companion object {
         private const val TAG = "InspectorService"
         private const val TARGET_PACKAGE = "in.gov.eci.bloapp"
+        private const val ACTION_PHOTO_CAPTURED = "com.example.bloappassistant.PHOTO_CAPTURED"
         private var lastEventTime = 0L
     }
 
     private var lastTextViewContext = ""
+    private val mainHandler = Handler(Looper.getMainLooper())
 
-    private val autofillReceiver = object : BroadcastReceiver() {
+    private val captureReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == "com.example.bloappassistant.AUTOFILL_DATA") {
-                val jsonData = intent.getStringExtra("json_data")
-                if (jsonData != null) {
-                    performAutofill(jsonData)
+            if (intent?.action == ACTION_PHOTO_CAPTURED) {
+                val photoPath = intent.getStringExtra("photo_path")
+                if (photoPath != null) {
+                    analyzePhoto(File(photoPath))
                 }
             }
         }
@@ -36,11 +43,11 @@ class InspectorAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        val filter = IntentFilter("com.example.bloappassistant.AUTOFILL_DATA")
+        val filter = IntentFilter(ACTION_PHOTO_CAPTURED)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(autofillReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            registerReceiver(captureReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
         } else {
-            registerReceiver(autofillReceiver, filter)
+            registerReceiver(captureReceiver, filter)
         }
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
@@ -59,7 +66,21 @@ class InspectorAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         super.onDestroy()
-        unregisterReceiver(autofillReceiver)
+        unregisterReceiver(captureReceiver)
+    }
+
+    private fun analyzePhoto(photoFile: File) {
+        Toast.makeText(this, "Analyzing image...", Toast.LENGTH_SHORT).show()
+        OpenAIVisionClient.analyzeForm(photoFile) { jsonResponse ->
+            mainHandler.post {
+                if (jsonResponse != null) {
+                    Log.d(TAG, "JSON Output: $jsonResponse")
+                    performAutofill(jsonResponse)
+                } else {
+                    Toast.makeText(this, "Failed to analyze image.", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
