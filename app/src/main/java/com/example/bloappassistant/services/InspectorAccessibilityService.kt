@@ -73,8 +73,8 @@ class InspectorAccessibilityService : AccessibilityService() {
         }
     }
 
-    override fun onAccessibilityButtonClicked(displayId: Int) {
-        super.onAccessibilityButtonClicked(displayId)
+    override fun onAccessibilityButtonClicked() {
+        super.onAccessibilityButtonClicked()
         Log.d(TAG, "Stickman clicked! Launching camera...")
         val captureIntent = Intent(this, com.example.bloappassistant.ui.CaptureActivity::class.java)
         captureIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
