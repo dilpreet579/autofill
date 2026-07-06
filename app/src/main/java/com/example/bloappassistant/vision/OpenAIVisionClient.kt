@@ -78,7 +78,7 @@ object OpenAIVisionClient {
         val requestBody = jsonBody.toRequestBody(JSON_MEDIA_TYPE)
         val request = Request.Builder()
             .url("https://api.openai.com/v1/chat/completions")
-            .header("Authorization", "Bearer ${"$"}API_KEY")
+            .header("Authorization", "Bearer $API_KEY")
             .post(requestBody)
             .build()
 
@@ -90,7 +90,7 @@ object OpenAIVisionClient {
 
             override fun onResponse(call: Call, response: Response) {
                 if (!response.isSuccessful) {
-                    Log.e(TAG, "API error: ${"$"}{response.code} - ${"$"}{response.body?.string()}")
+                    Log.e(TAG, "API error: ${response.code} - ${response.body?.string()}")
                     callback(null)
                     return
                 }
